@@ -1,8 +1,19 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:delivery/common/const/data.dart';
+import 'package:delivery/common/view/root_tab.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../common/component/custom_text_form_field.dart';
 import '../../common/const/colors.dart';
 import '../../common/layout/default_layout.dart';
+
+// localhost
+const emulatorIp = '10.0.2.2:3000';
+const simulatorIp = '127.0.0.1:3000';
 
 class LoginScreen extends StatefulWidget {
   static String get routeName => 'login';
@@ -14,8 +25,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  String username = '';
-  String password = '';
+  final dio = Dio();
+
+  final ip = Platform.isIOS ? simulatorIp : emulatorIp;
+
+  String username = 'test@codefactory.ai';
+  String password = 'testtest';
 
   @override
   Widget build(BuildContext context) {
@@ -52,17 +67,49 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: true,
                 ),
                 ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: PRIMARY_COLOR,
-                    ),
-                    child: const Text(
-                      '로그인',
-                      style: TextStyle(color: Colors.white),
-                    )),
+                  onPressed: () async {
+                    // ID : 비밀번호
+                    final rawString = '$username:$password';
+
+                    Codec<String, String> stringToBase64 = utf8.fuse(base64);
+                    String token = stringToBase64.encode(rawString);
+
+                    final resp = await dio.post(
+                      'http://$ip/auth/login',
+                      options: Options(
+                        headers: {'authorization': 'Basic $token'},
+                      ),
+                    );
+
+                    final refreshToken = resp.data['refreshToken'];
+                    final accessToken = resp.data['accessToken'];
+
+                    storage.write(key: REFRESH_TOKEN_KEY, value: refreshToken);
+                    storage.write(key: ACCESS_TOKEN_KEY, value: accessToken);
+
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => RootTab()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PRIMARY_COLOR,
+                  ),
+                  child: const Text(
+                    '로그인',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
                 const SizedBox(height: 16.0),
                 TextButton(
-                  onPressed: () async {},
+                  onPressed: () async {
+                    // const refreshToken = '';
+                    // final resp = await dio.post(
+                    //   'http://$ip/auth/token',
+                    //   options: Options(
+                    //     headers: {'authorization': 'Bearer $refreshToken'},
+                    //   ),
+                    // );
+                  },
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.black,
                   ),
